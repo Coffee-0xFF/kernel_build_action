@@ -4,65 +4,62 @@ on:
   push:
     branches: main
     paths:
-      - 'lxc/**'
+      - 'lxc/*.sh'
       - '.github/workflows/check.yml'
-      - 'kernelsu/**'
-      - 'tests/**'
+      - 'kernelsu/*.sh'
+      - 'rekernel/*.sh'
 
 jobs:
   yaml-check:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        lint: [python, js]
     steps:
 
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
 
 
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Setup (Python)
+        if: matrix.lint == 'python'
+        run: |
+          sudo apt install yamllint
 
-      - name: Check yaml
-        run: cd tests && bun run index.ts
+      - name: Setup (JS)
+        if: matrix.lint == 'js'
+        run: |
+          sudo npm install -g yaml-lint
 
-      - name: Clean Workspace
-        run: bun run tests/clean.ts
+      - name: Check yaml(Python)
+        if: matrix.lint == 'python'
+        run: |
+          A=$(find . | grep .yml)
+          /usr/bin/yamllint action.yml .github/dependabot.yml .github/ISSUE_TEMPLATE/common.yml
 
-  js-check:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-         node-version: 20
-
-      - name: Install dependence
-        run: cd tests && yarn install
-
-      - name: Check js
-        run: cd tests && npm run lint
+      - name: Check yaml(JS)
+        if: matrix.lint == 'js'
+        run: |
+          A=$(find . | grep .yml)
+          /usr/local/bin/yamllint $A
 
   sh-check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         lint: [shellcheck, shfmt]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: ShellCheck lint
         if: matrix.lint == 'shellcheck'
         uses: ludeeus/action-shellcheck@2.0.0
@@ -72,10 +69,10 @@ jobs:
         run: |
             export HOST_ARCH=$(dpkg --print-architecture)
             case ${HOST_ARCH} in
-                armv7* | armv8l | armhf | arm) aria2c https://github.com/mvdan/sh/releases/download/v3.9.0/shfmt_v3.9.0_linux_arm -o shfmt ;;
-                i*86 | x86) aria2c https://github.com/mvdan/sh/releases/download/v3.9.0/shfmt_v3.9.0_linux_x86 -o shfmt ;;
-                amd64 | x86_64) aria2c https://github.com/mvdan/sh/releases/download/v3.9.0/shfmt_v3.9.0_linux_amd64 -o shfmt ;;
-                aarch64 | arm64) aria2c https://github.com/mvdan/sh/releases/download/v3.9.0/shfmt_v3.9.0_linux_arm64 -o shfmt ;;
+                armv7* | armv8l | armhf | arm) aria2c https://github.com/mvdan/sh/releases/download/v3.11.0/shfmt_v3.11.0_linux_arm -o shfmt ;;
+                i*86 | x86) aria2c https://github.com/mvdan/sh/releases/download/v3.11.0/shfmt_v3.14.0_linux_x86 -o shfmt ;;
+                amd64 | x86_64) aria2c https://github.com/mvdan/sh/releases/download/v3.11.0/shfmt_v3.11.0_linux_amd64 -o shfmt ;;
+                aarch64 | arm64) aria2c https://github.com/mvdan/sh/releases/download/v3.11.0/shfmt_v3.11.0_linux_arm64 -o shfmt ;;
 
                 *) echo "Unknow cpu architecture for this device !" && exit 1 ;;
             esac
