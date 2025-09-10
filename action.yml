@@ -125,6 +125,9 @@ inputs:
   anykernel3-branch:
     description: 'define branch for 3rdparty anykernel3 url'
     required: false
+  anykernel3-in_img_path:
+    description: 'Manually specify the input image location for AnyKernel'
+    required: false
   bootimg-url:
     description: 'boot.img path'
     required: false
@@ -494,12 +497,16 @@ runs:
                 sed -i 's/IS_SLOT_DEVICE=0;/IS_SLOT_DEVICE=auto;/g' AnyKernel3/anykernel.sh
             fi
 
-            if [ -f out/arch/${{ inputs.arch }}/boot/Image.*-dtb ]; then
-                cp out/arch/${{ inputs.arch }}/boot/Image.*-dtb AnyKernel3/ -rv
-            elif [ -f out/arch/${{ inputs.arch }}/boot/Image.* ]; then
-                cp out/arch/${{ inputs.arch }}/boot/Image.* AnyKernel3/ -rv
+            if [ -z ${{ inputs.anykernel3-in_img_path }} ]; then 
+              if [ -f out/arch/${{ inputs.arch }}/boot/Image.*-dtb ]; then
+                  cp out/arch/${{ inputs.arch }}/boot/Image.*-dtb AnyKernel3/ -rv
+              elif [ -f out/arch/${{ inputs.arch }}/boot/Image.* ]; then
+                  cp out/arch/${{ inputs.arch }}/boot/Image.* AnyKernel3/ -rv
+              else
+                  cp out/arch/${{ inputs.arch }}/boot/Image AnyKernel3/ -rv
+              fi
             else
-                cp out/arch/${{ inputs.arch }}/boot/Image AnyKernel3/ -rv
+              cp "${{ inputs.anykernel3-in_img_path }}" AnyKernel3/ -rv
             fi
 
             test -f out/arch/${{ inputs.arch }}/boot/dtbo.img && cp -v out/arch/${{ inputs.arch }}/boot/dtbo.img AnyKernel3/
